@@ -40,7 +40,7 @@ function BasePhoneInput({
 
   // This is to trigger validation on prefill value changes
   useEffect(() => {
-    if (!value) return;
+    if (!value || typeof value !== "string") return;
 
     const sanitized = value
       .trim()
@@ -64,7 +64,7 @@ function BasePhoneInput({
   return (
     <PhoneInput
       {...rest}
-      value={value ? value.trim().replace(/^\+?/, "+") : undefined}
+      value={typeof value === "string" && value ? value.trim().replace(/^\+?/, "+") : undefined}
       enableSearch
       disableSearchIcon
       country={effectiveDefaultCountry}
@@ -75,8 +75,19 @@ function BasePhoneInput({
         placeholder: rest.placeholder,
         autoComplete: "tel",
       }}
-      onChange={(val: string) => {
-        onChange(val.startsWith("+") ? val : `+${val}`);
+      onChange={(val: unknown) => {
+        try {
+          if (typeof val !== "string") return;
+          const trimmed = val.trim();
+          if (!trimmed || trimmed === "+") {
+            onChange("");
+            return;
+          }
+          const sanitized = trimmed.startsWith("+") ? trimmed : `+${trimmed}`;
+          onChange(sanitized);
+        } catch (err) {
+          console.warn("Failed to sanitize phone input change", err);
+        }
       }}
       containerClass={classNames(
         "hover:border-emphasis focus-within:border-emphasis border-default !bg-default rounded-md border focus-within:outline-none focus-within:ring-0 focus-within:ring-brand-default disabled:cursor-not-allowed",
@@ -116,7 +127,7 @@ function BasePhoneInputWeb({
   return (
     <PhoneInput
       {...rest}
-      value={value ? value.trim().replace(/^\+?/, "+") : undefined}
+      value={typeof value === "string" && value ? value.trim().replace(/^\+?/, "+") : undefined}
       // react-phone-input-2 treats `country` as a fallback. Keeping it stable 
       // preserves calling-code-only values like `+371` during async updates, 
       // while full international numbers still resolve their country from `value`.
@@ -130,8 +141,19 @@ function BasePhoneInputWeb({
         placeholder: rest.placeholder,
         autoComplete: "tel",
       }}
-      onChange={(val: string) => {
-        onChange(val.startsWith("+") ? val : `+${val}`);
+      onChange={(val: unknown) => {
+        try {
+          if (typeof val !== "string") return;
+          const trimmed = val.trim();
+          if (!trimmed || trimmed === "+") {
+            onChange("");
+            return;
+          }
+          const sanitized = trimmed.startsWith("+") ? trimmed : `+${trimmed}`;
+          onChange(sanitized);
+        } catch (err) {
+          console.warn("Failed to sanitize phone input change", err);
+        }
       }}
       containerClass={classNames(
         "hover:border-emphasis focus-within:border-emphasis border-default !bg-default rounded-md border focus-within:outline-none focus-within:ring-0 focus-within:ring-brand-default disabled:cursor-not-allowed",
@@ -182,7 +204,8 @@ const useDefaultCountry = () => {
       if (isSupportedCountry(data?.countryCode)) {
         setDefaultCountry(data.countryCode.toLowerCase() as CountryCode);
       } else {
-        const navCountry = navigator.language.split("-")[1]?.toUpperCase();
+        const navLanguage = typeof navigator !== "undefined" ? navigator.language || "" : "";
+        const navCountry = navLanguage.includes("-") ? navLanguage.split("-")[1]?.toUpperCase() : undefined;
         if (navCountry && isSupportedCountry(navCountry)) {
           setDefaultCountry(navCountry.toLowerCase() as CountryCode);
         } else {

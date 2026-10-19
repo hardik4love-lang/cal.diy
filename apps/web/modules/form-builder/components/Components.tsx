@@ -497,10 +497,20 @@ export const Components: Record<FieldType, Component> = {
             </div>
           </div>
           {(() => {
-            const optionField = optionsInputs[value?.value];
+            const selectedOption =
+              typeof value === "object" && value !== null && "value" in value
+                ? value.value
+                : options[0]?.value;
+            const optionField = selectedOption ? optionsInputs[selectedOption] : undefined;
             if (!optionField) {
               return null;
             }
+            const optionValue =
+              typeof value === "object" && value !== null && "optionValue" in value
+                ? value.optionValue
+                : typeof value === "string"
+                  ? value
+                  : "";
             return (
               <div>
                 <ComponentForField
@@ -509,10 +519,10 @@ export const Components: Record<FieldType, Component> = {
                     ...optionField,
                     name: "optionField",
                   }}
-                  value={value?.optionValue}
+                  value={optionValue}
                   setValue={(val: string | undefined) => {
                     setValue({
-                      value: value?.value,
+                      value: selectedOption ?? options[0]?.value,
                       optionValue: val || "",
                     });
                   }}

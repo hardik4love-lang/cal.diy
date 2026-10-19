@@ -54,34 +54,44 @@ export const BookingFields = ({
 
   // Event-driven sync function
   const syncPhoneFields = (locationValue: unknown) => {
-    const parsed = PhoneLocationSchema.safeParse(locationValue);
-    if (!parsed.success) return;
-    const { optionValue } = parsed.data;
-    const phone = (optionValue ?? "").trim();
+    try {
+      const parsed = PhoneLocationSchema.safeParse(locationValue);
+      if (!parsed.success) return;
+      const { optionValue } = parsed.data;
+      if (typeof optionValue !== "string") return;
+      const phone = optionValue.trim();
 
-    // Skip if empty or same as last sync (avoid redundant updates during typing)
-    if (!phone || phone === lastSyncedPhoneRef.current) return;
+      // Skip if empty or same as last sync (avoid redundant updates during typing)
+      if (!phone || phone === lastSyncedPhoneRef.current) return;
 
-    // Copy phone to other phone fields (only if user hasn't manually touched them)
-    otherPhoneFieldNames.forEach((name) => {
-      const targetTouched = !!(formState.touchedFields as TouchedFields)?.responses?.[name];
+      // Copy phone to other phone fields (only if user hasn't manually touched them)
+      otherPhoneFieldNames.forEach((name) => {
+        const targetTouched = !!(formState.touchedFields as TouchedFields)?.responses?.[name];
 
-      if (!targetTouched) {
-        setValue(`responses.${name}`, phone, {
-          shouldDirty: false,
-          shouldValidate: false,
-        });
-      }
-    });
+        if (!targetTouched) {
+          setValue(`responses.${name}`, phone, {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        }
+      });
 
-    lastSyncedPhoneRef.current = phone;
+      lastSyncedPhoneRef.current = phone;
+    } catch (err) {
+      console.warn("Failed to sync phone fields", err);
+    }
   };
 
-  const getPriceFormattedLabel = (label: string, price: number) =>
-    `${label} (${Intl.NumberFormat(i18n.language, {
-      style: "currency",
-      currency: paymentCurrency,
-    }).format(price)})`;
+  const getPriceFormattedLabel = (label: string, price: number) => {
+    try {
+      return `${label} (${Intl.NumberFormat(i18n.language || "en", {
+        style: "currency",
+        currency: paymentCurrency || "USD",
+      }).format(price)})`;
+    } catch {
+      return `${label} (${price} ${paymentCurrency || "USD"})`;
+    }
+  };
 
   const getFieldWithDirectPricing = (field: Fields[number]) => {
     if (!fieldTypesConfigMap[field.type]?.supportsPricing || !field.label || !field.price) {
